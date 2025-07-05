@@ -1,46 +1,57 @@
-import { Controller, Post, Body } from '@nestjs/common';
-// import { ClientProxy } from '@nestjs/microservices';
-// import { ClientProxyFactory } from '@nestjs/microservices/client';
-// import { Transport } from '@nestjs/microservices/enums';
+import { Controller, Get, Post, Body, Query } from '@nestjs/common';
 import { OrderCreatedEvent } from '../../shared/order.dto';
 import { RmqService } from './rmq.service';
 import { AppService } from './app.service';
+import { TransformerResponse } from './commons/decorators/response.decorator';
+import { Order } from './entity/orders.entity';
 
-@Controller('orders')
+@Controller()
 export class OrderController {
   constructor(
     private readonly rmqService: RmqService,
     private readonly appService: AppService,
   ) {}
 
-  @Post()
+  @Post('orders')
   createOrder(
+    @TransformerResponse()
+    res: {
+      success(orderDetails: OrderCreatedEvent, arg1: string): unknown;
+      orderId: number;
+      status: string;
+    },
     @Body()
     body: {
       email: string;
-      products: { name: string; price: string; status: string }[];
+      productIds: number[];
     },
   ) {
     const orderDetails: OrderCreatedEvent = {
       orderId: Date.now(),
       customerEmail: body.email,
-      products: body.products,
+      productIds: body.productIds,
     };
 
     this.appService.createOrder({
       customerEmail: body.email,
-      products: body.products.map((product) => {
-        return {
-          name: product.name,
-          price: parseFloat(product.price),
-          status: product.status || 'pending', // Default status to 'pending'
-        };
-      }),
+      productIds: body.productIds,
     });
-
-    return {
-      status: 'Order created and event published',
-      orderId: orderDetails.orderId,
-    };
+    return res.success(orderDetails, 'Order created');
   }
+
+  @Get('track/orders')
+  async trackOrder(
+    @Query('email') email: string,
+    @TransformerResponse()
+    res: {
+      success(data: Order[], arg1: string): unknown;
+      data: Order[];
+    },
+  ) {
+    const data = await this.appService.trackOrders(email);
+    return res.success(data, 'Orders retrieved successfully');
+  }
+
+  @Get('products')
+  getProducts() {}
 }

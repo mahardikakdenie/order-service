@@ -5,6 +5,7 @@ import { OrderController } from './app.controller';
 import { AppService } from './app.service';
 import { RmqService } from './rmq.service';
 import { Order } from './entity/orders.entity';
+import { Product } from './entity/product.entity';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { Order } from './entity/orders.entity';
       logging: true,
     }),
     TypeOrmModule.forFeature([Order]),
+    TypeOrmModule.forFeature([Product]),
   ],
   controllers: [OrderController],
   providers: [AppService, RmqService],

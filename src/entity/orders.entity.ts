@@ -27,4 +27,6 @@ export class Order {
 
   @CreateDateColumn()
   createdAt: Date;
+  productName: string;
+  productPrice: number;
 }
