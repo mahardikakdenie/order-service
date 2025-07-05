@@ -2,80 +2,45 @@ import { Controller, Post, Body } from '@nestjs/common';
 // import { ClientProxy } from '@nestjs/microservices';
 // import { ClientProxyFactory } from '@nestjs/microservices/client';
 // import { Transport } from '@nestjs/microservices/enums';
-import { OrderCreatedEvent } from './shared/order.dto';
+import { OrderCreatedEvent } from '../../shared/order.dto';
 import { RmqService } from './rmq.service';
+import { AppService } from './app.service';
 
 @Controller('orders')
 export class OrderController {
-  constructor(private readonly rmqService: RmqService) {}
+  constructor(
+    private readonly rmqService: RmqService,
+    private readonly appService: AppService,
+  ) {}
 
   @Post()
   createOrder(
     @Body()
     body: {
       email: string;
-      product: { name: string; price: string; status: string };
+      products: { name: string; price: string; status: string }[];
     },
   ) {
     const orderDetails: OrderCreatedEvent = {
       orderId: Date.now(),
       customerEmail: body.email,
-      product: {
-        name: String(body.product.name),
-        price: Number(body.product.price),
-        status: String(body.product.status), // Default status
-      },
+      products: body.products,
     };
 
-    // 👇 Kirim ke exchange
-    this.rmqService.publish('order_created', '', {
-      pattern: 'order_created',
-      data: orderDetails,
+    this.appService.createOrder({
+      customerEmail: body.email,
+      products: body.products.map((product) => {
+        return {
+          name: product.name,
+          price: parseFloat(product.price),
+          status: product.status || 'pending', // Default status to 'pending'
+        };
+      }),
     });
 
     return {
       status: 'Order created and event published',
       orderId: orderDetails.orderId,
-      data: orderDetails.product,
     };
   }
 }
-
-// @Controller('orders')
-// export class OrderController {
-//   private rabbitClient: ClientProxy;
-
-//   constructor() {
-//     this.rabbitClient = ClientProxyFactory.create({
-//       transport: Transport.RMQ,
-//       options: {
-//         urls: ['amqp://guest:guest@localhost:5672'],
-//         queue: 'order_created', // queue tetap diperlukan sebagai fallback
-//         noAck: false,
-//         queueOptions: {
-//           exclusive: false,
-//           durable: false,
-//         },
-//         prefetchCount: 1,
-//         isGlobalPrefetchCount: true,
-//       },
-//     });
-//   }
-
-//   @Post()
-//   createOrder(@Body() body: { email: string; items: any[] }) {
-//     const orderDetails: OrderCreatedEvent = {
-//       orderId: Date.now(),
-//       customerEmail: body.email,
-//       items: (body.items || []).map(
-//         (item: { name: string; price: number }) => ({
-//           name: String(item.name),
-//           price: Number(item.price),
-//         }),
-//       ),
-//     };
-
-//     this.rabbitClient.emit('order_created', orderDetails);
-//     return { status: 'Order created', orderId: orderDetails.orderId };
-//   }
-// }

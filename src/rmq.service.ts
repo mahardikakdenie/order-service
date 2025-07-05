@@ -1,3 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-member-access */
+
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { connect, Channel, Connection } from 'amqplib';
 
@@ -11,37 +15,56 @@ export class RmqService {
   }
 
   private async connect() {
-    try {
-      this.connection = await connect('amqp://guest:guest@localhost:5672');
-      this.channel = await this.connection.createChannel();
+    let retries = 5;
 
-      await this.channel.assertExchange('order_created', 'fanout', {
-        durable: true,
-      });
-    } catch (rawError) {
-      // ✅ Amanin error dengan type assertion ke Error
-      const error = rawError as Error;
+    while (retries) {
+      try {
+        // const connection = await connect('amqp://guest:guest@rabbitmq:5672');
+        const connection = await connect('amqp://guest:guest@localhost:5672');
+        if (!connection) {
+          throw new InternalServerErrorException(
+            'Failed to create RabbitMQ connection',
+          );
+        }
 
-      // ✅ Log error dengan aman
-      console.error('Failed to connect to RabbitMQ:', error.message);
+        this.connection = connection as Connection;
 
-      // ❌ JANGAN throw error langsung
-      // ✅ Lebih baik lempar exception NestJS
-      throw new InternalServerErrorException(`RabbitMQ connection failed`);
+        const channel = await this.connection.createChannel();
+        if (!channel) {
+          throw new InternalServerErrorException(
+            'Failed to create RabbitMQ channel',
+          );
+        }
+        this.channel = channel as Channel;
+
+        await this.channel.assertExchange('order_created', 'fanout', {
+          durable: true,
+        });
+        console.log('Connected to RabbitMQ');
+        return;
+      } catch (error) {
+        console.error(
+          `Connection failed, retries left: ${retries}, error:`,
+          error.message,
+        );
+        retries -= 1;
+        await new Promise((res) => setTimeout(res, 5000));
+      }
     }
+
+    throw new InternalServerErrorException(
+      'RabbitMQ connection failed after retries',
+    );
   }
 
-  async publish(
-    exchange: string,
-    routingKey: string,
-    message: any,
-  ): Promise<boolean> {
+  publish(exchange: string, routingKey: string, message: any): boolean {
     if (!this.channel) {
       throw new InternalServerErrorException(
         'RabbitMQ channel not initialized',
       );
     }
 
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
     return this.channel.publish(
       exchange,
       routingKey,
