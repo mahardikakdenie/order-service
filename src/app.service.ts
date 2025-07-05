@@ -35,7 +35,7 @@ export class AppService {
 
       const savedOrder = await this.orderRepository.save(order);
 
-      // Kirim event ke RabbitMQ
+      // send event to RabbitMQ
       this.rmqService.publish('order_created', '', {
         pattern: 'order_created',
         data: {
