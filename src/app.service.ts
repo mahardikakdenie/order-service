@@ -1,9 +1,14 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from './entity/orders.entity';
 import { Repository } from 'typeorm';
 import { Product } from './entity/product.entity';
 import { RmqService } from './rmq.service';
+import type { ResponseInterface } from '../../shared/libs/response.interface';
 
 @Injectable()
 export class AppService {
@@ -20,12 +25,26 @@ export class AppService {
   async createOrder(data: {
     customerEmail: string;
     productIds: number[];
-  }): Promise<any> {
+  }): Promise<ResponseInterface<Order[]>> {
     const products = await this.productRepository.findByIds(data.productIds); // ✅ Ambil semua produk berdasarkan ID
+    const result: ResponseInterface<Order[]> = {
+      meta: {
+        status: true,
+        code: 200,
+        message: 'success',
+      },
+      data: [],
+    };
 
     if (products.length === 0) {
-      throw new Error('Produk tidak ditemukan');
+      result.meta = {
+        status: false,
+        code: 404,
+        message: 'No products found for the provided product IDs',
+      };
     }
+
+    const savedOrders: Order[] = [];
 
     for (const product of products) {
       const order = new Order();
@@ -48,21 +67,65 @@ export class AppService {
           },
         },
       });
+
+      savedOrders.push(savedOrder);
     }
 
-    return 'Orders created and events published.';
+    result.data = savedOrders;
+    return result;
   }
 
-  async trackOrders(customerEmail: string): Promise<Order[]> {
+  async trackOrders(orderId: number): Promise<ResponseInterface<Order[]>> {
+    const result: ResponseInterface<Order[]> = {
+      meta: {
+        status: true,
+        code: 200,
+        message: 'success',
+      },
+      data: [],
+    };
     try {
+      if (!orderId) {
+        result.meta = {
+          code: 404,
+          status: false,
+          message: 'orderid is required',
+        };
+      }
+
       const orders = await this.orderRepository.find({
-        where: { customerEmail },
+        where: { id: orderId },
         relations: ['product'],
       });
 
-      return orders;
-    } catch (error: any) {
-      throw new Error(`Failed to fetch orders: ${error}`);
+      if (!orders.length) {
+        result.meta = {
+          code: 404,
+          status: false,
+          message: 'No orders found for this orderid',
+        };
+      }
+
+      result.data = orders;
+    } catch (error) {
+      if (
+        error instanceof BadRequestException ||
+        error instanceof NotFoundException
+      ) {
+        result.meta = {
+          code: 404,
+          status: false,
+          message: error.message,
+        };
+      }
+
+      result.meta = {
+        code: 501,
+        status: false,
+        message: 'Something went wrong while fetching orders',
+      };
     }
+
+    return result;
   }
 }

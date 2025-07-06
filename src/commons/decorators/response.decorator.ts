@@ -6,13 +6,15 @@ export const TransformerResponse = createParamDecorator(
     const response = ctx.switchToHttp().getResponse<Response>();
 
     return {
-      success: <T>(payload: T, statusText?: string) => {
+      success: <T>(payload: T, statusText?: string, meta?: Response) => {
         return response.status(response.statusCode).json({
-          meta: {
-            status: true,
-            code: response.statusCode,
-            message: statusText || 'Success',
-          },
+          meta: !meta
+            ? {
+                status: true,
+                code: response.statusCode,
+                message: statusText || 'Success',
+              }
+            : meta,
           data: payload,
         });
       },
