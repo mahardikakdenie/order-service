@@ -32,6 +32,7 @@ import { AppConfigModule, AppConfigService } from './commons/decorators/config';
         } as TypeOrmModuleOptions;
       },
     }),
+    AppConfigModule,
     TypeOrmModule.forFeature([Order]),
     TypeOrmModule.forFeature([Product]),
   ],

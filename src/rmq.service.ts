@@ -19,8 +19,9 @@ export class RmqService {
 
     while (retries) {
       try {
-        // const connection = await connect('amqp://guest:guest@rabbitmq:5672');
-        const connection = await connect('amqp://guest:guest@localhost:5672');
+        const connection = await connect(
+          process.env.RABBITMQ_URLS || 'amqp://guest:guest@localhost:5672',
+        );
         if (!connection) {
           throw new InternalServerErrorException(
             'Failed to create RabbitMQ connection',
@@ -37,9 +38,13 @@ export class RmqService {
         }
         this.channel = channel as Channel;
 
-        await this.channel.assertExchange('order_created', 'fanout', {
-          durable: true,
-        });
+        await this.channel.assertExchange(
+          process.env.RABBITMQ_EXCHAGE || 'order_created',
+          'fanout',
+          {
+            durable: true,
+          },
+        );
         console.log('Connected to RabbitMQ');
         return;
       } catch (error) {

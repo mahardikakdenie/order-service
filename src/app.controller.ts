@@ -6,7 +6,7 @@ import { Order } from './entity/orders.entity';
 import {
   ResponseInterface,
   ResponseMeta,
-} from '../../shared/libs/response.interface';
+} from './shared/libs/response.interface';
 
 @Controller()
 export class OrderController {

@@ -5,9 +5,7 @@ import { DataSource } from 'typeorm';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const dataSource = app.get(DataSource);
-  await dataSource.runMigrations(); // 👈 jalankan migrasi
-
+  app.get(DataSource);
   await app.listen(3000);
 }
 void bootstrap();

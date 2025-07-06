@@ -8,7 +8,7 @@ import { Order } from './entity/orders.entity';
 import { Repository } from 'typeorm';
 import { Product } from './entity/product.entity';
 import { RmqService } from './rmq.service';
-import type { ResponseInterface } from '../../shared/libs/response.interface';
+import { ResponseInterface } from './shared/libs/response.interface';
 
 @Injectable()
 export class AppService {

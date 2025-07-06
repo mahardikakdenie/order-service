@@ -1,5 +1,4 @@
 {
-  "entryFile": "order-service/src/main",
   "$schema": "https://json.schemastore.org/nest-cli",
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
