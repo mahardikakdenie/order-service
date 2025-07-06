@@ -17,7 +17,7 @@ export class AppService {
     private readonly orderRepository: Repository<Order>,
 
     @InjectRepository(Product)
-    private readonly productRepository: Repository<Product>, // 👈 Tambahkan repo produk
+    private readonly productRepository: Repository<Product>,
 
     private readonly rmqService: RmqService,
   ) {}
@@ -26,7 +26,7 @@ export class AppService {
     customerEmail: string;
     productIds: number[];
   }): Promise<ResponseInterface<Order[]>> {
-    const products = await this.productRepository.findByIds(data.productIds); // ✅ Ambil semua produk berdasarkan ID
+    const products = await this.productRepository.findByIds(data.productIds);
     const result: ResponseInterface<Order[]> = {
       meta: {
         status: true,
